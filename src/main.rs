@@ -1,7 +1,7 @@
 mod config;
 
 use actix_files::Files;
-use actix_web::{App, HttpServer};
+use actix_web::{web, App, HttpServer, HttpResponse, middleware};
 use config::Config;
 use std::env;
 use anyhow::Result;
@@ -57,7 +57,11 @@ async fn main() -> Result<()> {
     let demo_path = demo_path.clone();
 
     let server = HttpServer::new(move || {
-        App::new().service(Files::new("/", demo_path.clone()).index_file("index.html"))
+        App::new()
+            .wrap(middleware::DefaultHeaders::new().add(("Cache-Control", "no-cache, no-store, must-revalidate")))
+            .wrap(middleware::DefaultHeaders::new().add(("Pragma", "no-cache")))
+            .wrap(middleware::DefaultHeaders::new().add(("Expires", "0")))
+            .service(Files::new("/", demo_path.clone()).index_file("index.html"))
     })
     .bind("127.0.0.1:3000")?
     .run();
