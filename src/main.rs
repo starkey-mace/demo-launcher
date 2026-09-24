@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
     println!("Server running at http://localhost:3000");
     println!("Press Ctrl+C to exit\n");
 
-    let demo_path = demo_path.clone();
+    let serving_dir = current_dir.clone();
 
     let server = HttpServer::new(move || {
         App::new()
@@ -59,12 +59,14 @@ async fn main() -> Result<()> {
             )
             .wrap(middleware::DefaultHeaders::new().add(("Pragma", "no-cache")))
             .wrap(middleware::DefaultHeaders::new().add(("Expires", "0")))
-            .service(Files::new("/", demo_path.clone()).index_file("index.html"))
+            .service(Files::new("/", serving_dir.clone()).index_file("index.html"))
     })
         .bind("127.0.0.1:3000")?
         .run();
 
-    let _ = open::that(&format!("http://localhost:3000/?v={}", std::time::SystemTime::now()
+    let _ = open::that(&format!("http://localhost:3000/{}?v={}",
+        selected_demo.path,
+        std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_millis()));
