@@ -69,7 +69,17 @@ async fn main() -> Result<()> {
     tokio::select! {
         _ = server => {},
         _ = ctrl_c => {
-            println!("\nShutting down...");
+            println!("\n✓ Shutting down server...");
+            println!("✓ Closing application...\n");
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+            #[cfg(target_os = "macos")]
+            {
+                let _ = std::process::Command::new("osascript")
+                    .arg("-e")
+                    .arg("tell application \"Terminal\" to close (every window whose name contains \"Demo Launcher\")")
+                    .output();
+            }
         }
     }
 
