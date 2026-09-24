@@ -62,27 +62,27 @@ Create a `config.json` file in the same directory as your executable. This file 
   "demos": [
     {
       "name": "Demo 1 - Product Overview",
-      "path": "demos/demo1"
+      "path": "demos/demo1/index.html"
     },
     {
       "name": "Demo 2 - Feature Deep Dive",
-      "path": "demos/demo2"
+      "path": "demos/demo2/www/index.html"
     },
     {
       "name": "Demo 3 - ROI Calculator",
-      "path": "demos/demo3/www"
+      "path": "demos/demo3/www/index.html"
     },
     {
       "name": "Demo 4 - Customer Success",
-      "path": "demos/demo4"
+      "path": "demos/demo4/index.html"
     },
     {
       "name": "Demo 5 - Interactive Walkthrough",
-      "path": "demos/demo5/build"
+      "path": "demos/demo5/build/index.html"
     },
     {
       "name": "Demo 6 - Pricing Comparison",
-      "path": "demos/demo6"
+      "path": "demos/demo6/index.html"
     }
   ]
 }
@@ -90,9 +90,10 @@ Create a `config.json` file in the same directory as your executable. This file 
 
 ### Path Configuration
 
-- **path**: Relative path from the executable to the directory containing your `index.html` file
-- Each demo can have a different directory structure - just point to wherever the index.html lives
+- **path**: Relative path from the executable to the `index.html` file for that demo
+- Each demo can have a different directory structure - point to the full path to index.html
 - Paths are case-sensitive on Mac/Linux, but case-insensitive on Windows
+- All demos can access shared assets at the root level (next to the executable)
 
 ## Usage
 
@@ -111,6 +112,10 @@ Create a `config.json` file in the same directory as your executable. This file 
 C:\Users\User\Desktop\Demo Launcher\
 ├── demo-launcher.exe
 ├── config.json
+├── shared-assets/          (optional - accessible to all demos)
+│   ├── css/
+│   ├── js/
+│   └── images/
 └── demos/
     ├── demo1/
     │   ├── index.html
@@ -126,35 +131,52 @@ C:\Users\User\Desktop\Demo Launcher\
             └── assets/
 ```
 
+In this example:
+- Demo 1 would have `"path": "demos/demo1/index.html"`
+- Demo 2 would have `"path": "demos/demo2/index.html"`
+- Demo 3 would have `"path": "demos/demo3/www/index.html"`
+- All demos can reference `shared-assets/` in their HTML files
+
 ## How It Works
 
 1. The application reads `config.json` from the same directory as the executable
 2. Shows an interactive menu with your configured demo names
 3. When you select a demo, it:
-   - Starts a web server on `http://localhost:3000`
-   - Serves all files from the specified demo directory
-   - Opens your browser to `http://localhost:3000`
-   - Runs indefinitely until you close the terminal/command window
+   - Starts a web server on `http://localhost:3000` serving files from the executable's directory
+   - Opens your browser to the specific index.html file for that demo (e.g., `http://localhost:3000/demos/demo1/index.html`)
+   - All demos can access shared assets from parent directories
+   - Runs indefinitely until you close the terminal/command window or press Ctrl+C
 
 ## Requirements for Your Demos
 
 Each demo folder needs:
-- An `index.html` file (at the path specified in config.json)
+- An `index.html` file at the path specified in config.json
 - All assets (CSS, JS, images, etc.) referenced with relative paths from the index.html file
 
 ### Example HTML Asset Paths
 
 **If index.html is in `demos/demo1/`:**
 ```html
-<link rel="stylesheet" href="css/style.css">  <!-- Loads demos/demo1/css/style.css -->
-<script src="js/app.js"></script>              <!-- Loads demos/demo1/js/app.js -->
-<img src="images/logo.png">                    <!-- Loads demos/demo1/images/logo.png -->
+<!-- Assets in same directory -->
+<link rel="stylesheet" href="css/style.css">  <!-- loads demos/demo1/css/style.css -->
+<script src="js/app.js"></script>              <!-- loads demos/demo1/js/app.js -->
+<img src="images/logo.png">                    <!-- loads demos/demo1/images/logo.png -->
+
+<!-- Assets in shared directory (parent level) -->
+<link rel="stylesheet" href="../shared-assets/css/common.css">
+<img src="../shared-assets/images/header.png">
 ```
 
 **If index.html is in `demos/demo3/www/`:**
 ```html
-<link rel="stylesheet" href="css/style.css">  <!-- Loads demos/demo3/www/css/style.css -->
-<script src="js/app.js"></script>              <!-- Loads demos/demo3/www/js/app.js -->
+<!-- Assets in same directory -->
+<link rel="stylesheet" href="css/style.css">  <!-- loads demos/demo3/www/css/style.css -->
+
+<!-- Assets in parent directory -->
+<script src="../js/app.js"></script>           <!-- loads demos/demo3/js/app.js -->
+
+<!-- Assets in shared directory -->
+<link rel="stylesheet" href="../../shared-assets/css/common.css">
 ```
 
 ## Stopping the Server
