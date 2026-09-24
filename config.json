@@ -1,0 +1,28 @@
+{
+  "demos": [
+    {
+      "name": "Demo 1 - Product Overview",
+      "path": "demos/demo1"
+    },
+    {
+      "name": "Demo 2 - Feature Deep Dive",
+      "path": "demos/demo2"
+    },
+    {
+      "name": "Demo 3 - ROI Calculator",
+      "path": "demos/demo3/www"
+    },
+    {
+      "name": "Demo 4 - Customer Success",
+      "path": "demos/demo4"
+    },
+    {
+      "name": "Demo 5 - Interactive Walkthrough",
+      "path": "demos/demo5/build"
+    },
+    {
+      "name": "Demo 6 - Pricing Comparison",
+      "path": "demos/demo6"
+    }
+  ]
+}

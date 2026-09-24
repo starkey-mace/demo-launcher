@@ -1,0 +1,66 @@
+mod config;
+
+use actix_files::Files;
+use actix_web::{App, HttpServer};
+use config::Config;
+use std::env;
+use anyhow::Result;
+
+#[actix_web::main]
+async fn main() -> Result<()> {
+    let current_dir = env::current_dir()?;
+    let config_path = current_dir.join("config.json");
+
+    let config = Config::load(&config_path)?;
+
+    if config.demos.is_empty() {
+        eprintln!("Error: No demos configured in config.json");
+        std::process::exit(1);
+    }
+
+    let demo_names: Vec<String> = config.demos.iter().map(|d| d.name.clone()).collect();
+
+    println!("\n╔════════════════════════════════════╗");
+    println!("║       Demo Launcher                ║");
+    println!("╚════════════════════════════════════╝\n");
+
+    let selected = inquire::Select::new("Select a demo to launch:", demo_names.clone())
+        .prompt()?;
+
+    let selected_demo = config
+        .demos
+        .iter()
+        .find(|d| d.name == selected)
+        .ok_or_else(|| anyhow::anyhow!("Demo not found"))?;
+
+    let demo_path = current_dir.join(&selected_demo.path);
+
+    if !demo_path.exists() {
+        eprintln!(
+            "Error: Demo path does not exist: {}",
+            demo_path.display()
+        );
+        std::process::exit(1);
+    }
+
+    println!(
+        "\nStarting server for: {}\nPath: {}",
+        selected_demo.name,
+        demo_path.display()
+    );
+    println!("Server running at http://localhost:3000\n");
+
+    let demo_path = demo_path.clone();
+
+    let server = HttpServer::new(move || {
+        App::new().service(Files::new("/", demo_path.clone()).index_file("index.html"))
+    })
+    .bind("127.0.0.1:3000")?
+    .run();
+
+    let _ = open::that("http://localhost:3000");
+
+    server.await?;
+
+    Ok(())
+}
