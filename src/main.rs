@@ -1,7 +1,7 @@
 mod config;
 
 use actix_files::Files;
-use actix_web::{web, App, HttpServer, HttpResponse, middleware};
+use actix_web::{ App, HttpServer, middleware };
 use config::Config;
 use std::env;
 use anyhow::Result;
@@ -19,7 +19,10 @@ async fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    let demo_names: Vec<String> = config.demos.iter().map(|d| d.name.clone()).collect();
+    let demo_names: Vec<String> = config.demos
+        .iter()
+        .map(|d| d.name.clone())
+        .collect();
 
     clearscreen::clear().unwrap();
 
@@ -27,11 +30,9 @@ async fn main() -> Result<()> {
     println!("║       Demo Launcher                ║");
     println!("╚════════════════════════════════════╝\n");
 
-    let selected = inquire::Select::new("Select a demo to launch:", demo_names.clone())
-        .prompt()?;
+    let selected = inquire::Select::new("Select a demo to launch:", demo_names.clone()).prompt()?;
 
-    let selected_demo = config
-        .demos
+    let selected_demo = config.demos
         .iter()
         .find(|d| d.name == selected)
         .ok_or_else(|| anyhow::anyhow!("Demo not found"))?;
@@ -39,18 +40,11 @@ async fn main() -> Result<()> {
     let demo_path = current_dir.join(&selected_demo.path);
 
     if !demo_path.exists() {
-        eprintln!(
-            "Error: Demo path does not exist: {}",
-            demo_path.display()
-        );
+        eprintln!("Error: Demo path does not exist: {}", demo_path.display());
         std::process::exit(1);
     }
 
-    println!(
-        "\nStarting server for: {}\nPath: {}",
-        selected_demo.name,
-        demo_path.display()
-    );
+    println!("\nStarting server for: {}\nPath: {}", selected_demo.name, demo_path.display());
     println!("Server running at http://localhost:3000");
     println!("Press Ctrl+C to exit\n");
 
@@ -58,15 +52,22 @@ async fn main() -> Result<()> {
 
     let server = HttpServer::new(move || {
         App::new()
-            .wrap(middleware::DefaultHeaders::new().add(("Cache-Control", "no-cache, no-store, must-revalidate")))
+            .wrap(
+                middleware::DefaultHeaders
+                    ::new()
+                    .add(("Cache-Control", "no-cache, no-store, must-revalidate"))
+            )
             .wrap(middleware::DefaultHeaders::new().add(("Pragma", "no-cache")))
             .wrap(middleware::DefaultHeaders::new().add(("Expires", "0")))
             .service(Files::new("/", demo_path.clone()).index_file("index.html"))
     })
-    .bind("127.0.0.1:3000")?
-    .run();
+        .bind("127.0.0.1:3000")?
+        .run();
 
-    let _ = open::that("http://localhost:3000");
+    let _ = open::that(&format!("http://localhost:3000/?v={}", std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis()));
 
     let ctrl_c = tokio::signal::ctrl_c();
 
