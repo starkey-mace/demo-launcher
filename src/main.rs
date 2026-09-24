@@ -3,11 +3,8 @@ mod config;
 use actix_files::Files;
 use actix_web::{App, HttpServer};
 use config::Config;
-use crossterm::event::{self, Event, KeyCode};
 use std::env;
 use anyhow::Result;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
 #[actix_web::main]
 async fn main() -> Result<()> {
@@ -55,11 +52,9 @@ async fn main() -> Result<()> {
         demo_path.display()
     );
     println!("Server running at http://localhost:3000");
-    println!("Press ESC to exit\n");
+    println!("Press Ctrl+C to exit\n");
 
     let demo_path = demo_path.clone();
-    let shutdown = Arc::new(AtomicBool::new(false));
-    let shutdown_clone = shutdown.clone();
 
     let server = HttpServer::new(move || {
         App::new().service(Files::new("/", demo_path.clone()).index_file("index.html"))
@@ -69,32 +64,14 @@ async fn main() -> Result<()> {
 
     let _ = open::that("http://localhost:3000");
 
-    let server_handle = tokio::spawn(async move {
-        server.await
-    });
+    let ctrl_c = tokio::signal::ctrl_c();
 
-    let keyboard_handle = tokio::spawn(async move {
-        loop {
-            if event::poll(std::time::Duration::from_millis(100)).unwrap_or(false) {
-                if let Event::Key(key) = event::read().unwrap_or(Event::FocusLost) {
-                    if key.code == KeyCode::Esc {
-                        shutdown_clone.store(true, Ordering::SeqCst);
-                        break;
-                    }
-                }
-            }
+    tokio::select! {
+        _ = server => {},
+        _ = ctrl_c => {
+            println!("\nShutting down...");
         }
-    });
-
-    loop {
-        if shutdown.load(Ordering::SeqCst) {
-            break;
-        }
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
-
-    server_handle.abort();
-    keyboard_handle.abort();
 
     std::process::exit(0);
 }
