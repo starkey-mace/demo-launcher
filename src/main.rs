@@ -3,13 +3,17 @@ mod config;
 use actix_files::Files;
 use actix_web::{App, HttpServer};
 use config::Config;
+use crossterm::event::{self, Event, KeyCode};
 use std::env;
 use anyhow::Result;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 #[actix_web::main]
 async fn main() -> Result<()> {
-    let current_dir = env::current_dir()?;
-    let config_path = current_dir.join("config.json");
+    let exe_dir = std::fs::canonicalize(env::current_exe()?)?.parent().unwrap().to_path_buf();
+    let config_path = exe_dir.join("config.json");
+    let current_dir = exe_dir.clone();
 
     let config = Config::load(&config_path)?;
 
@@ -19,6 +23,8 @@ async fn main() -> Result<()> {
     }
 
     let demo_names: Vec<String> = config.demos.iter().map(|d| d.name.clone()).collect();
+
+    clearscreen::clear().unwrap();
 
     println!("\n╔════════════════════════════════════╗");
     println!("║       Demo Launcher                ║");
@@ -48,9 +54,12 @@ async fn main() -> Result<()> {
         selected_demo.name,
         demo_path.display()
     );
-    println!("Server running at http://localhost:3000\n");
+    println!("Server running at http://localhost:3000");
+    println!("Press ESC to exit\n");
 
     let demo_path = demo_path.clone();
+    let shutdown = Arc::new(AtomicBool::new(false));
+    let shutdown_clone = shutdown.clone();
 
     let server = HttpServer::new(move || {
         App::new().service(Files::new("/", demo_path.clone()).index_file("index.html"))
@@ -60,7 +69,32 @@ async fn main() -> Result<()> {
 
     let _ = open::that("http://localhost:3000");
 
-    server.await?;
+    let server_handle = tokio::spawn(async move {
+        server.await
+    });
 
-    Ok(())
+    let keyboard_handle = tokio::spawn(async move {
+        loop {
+            if event::poll(std::time::Duration::from_millis(100)).unwrap_or(false) {
+                if let Event::Key(key) = event::read().unwrap_or(Event::FocusLost) {
+                    if key.code == KeyCode::Esc {
+                        shutdown_clone.store(true, Ordering::SeqCst);
+                        break;
+                    }
+                }
+            }
+        }
+    });
+
+    loop {
+        if shutdown.load(Ordering::SeqCst) {
+            break;
+        }
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    }
+
+    server_handle.abort();
+    keyboard_handle.abort();
+
+    std::process::exit(0);
 }
